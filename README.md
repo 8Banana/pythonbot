@@ -1,0 +1,2 @@
+# pythonbot
+Useful IRC bot.
