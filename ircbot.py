@@ -105,6 +105,10 @@ class IrcBot:
     async def send_privmsg(self, recipient, text):
         await self._send("PRIVMSG", recipient, ":" + text)
 
+    async def send_action(self, recipient, action):
+        await self._send("PRIVMSG", recipient,
+                         ":\x01ACTION {}\x01".format(action))
+
     async def mainloop(self):
         while True:
             line = await self._recv_line()
