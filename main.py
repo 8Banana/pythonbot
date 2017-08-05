@@ -6,7 +6,7 @@ import curio
 
 from ircbot import IrcBot
 
-SLAP_TEMPLATE = "slaps {slapee} around a bit with {fish}"
+SLAP_TEMPLATE = "slaps {slappee} around a bit with {fish}"
 FISH = (
     "asyncio", "multiprocessing", "twisted", "django", "pathlib",
     "python 2.7", "a daemon thread",
@@ -25,9 +25,9 @@ async def annoy_raylu(self, _, recipient, text):
 
 
 @bot.on_command("!slap", 1)
-async def slap(self, sender, recipient, slapee):
+async def slap(self, sender, recipient, slappee):
     fish = random.choice(FISH)
-    await self.send_action(recipient, SLAP_TEMPLATE.format(slapee=slapee,
+    await self.send_action(recipient, SLAP_TEMPLATE.format(slappee=slappee,
                                                            fish=fish))
 
 
