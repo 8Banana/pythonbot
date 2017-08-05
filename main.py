@@ -8,12 +8,8 @@ from ircbot import IrcBot
 
 SLAP_TEMPLATE = "slaps {slapee} around a bit with {fish}"
 FISH = (
-    "a large trout",
-    "a damn shark",
-    "some random fish",
-    "a Tinder catfish",
-    "a Toothlessfish",
-    "a small carp",
+    "asyncio", "multiprocessing", "twisted", "django", "pathlib",
+    "python 2.7", "a daemon thread",
 )
 
 bot = IrcBot()
