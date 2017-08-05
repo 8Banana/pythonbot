@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
+import random
 import urllib.parse
 
 import curio
 
 from ircbot import IrcBot
+
+SLAP_TEMPLATE = "slaps {slapee} around a bit with {fish}"
+FISH = (
+    "a large trout",
+    "a damn shark",
+    "some random fish",
+    "a Tinder catfish",
+    "a Toothlessfish",
+    "a small carp",
+)
 
 bot = IrcBot()
 
@@ -15,6 +26,13 @@ async def annoy_raylu(self, _, recipient, text):
     if text.startswith(">>> "):
         text = text.replace(">>>", "!py3", 1)
         await self.send_privmsg(recipient, text)
+
+
+@bot.on_command("!slap", 1)
+async def slap(self, sender, recipient, slapee):
+    fish = random.choice(FISH)
+    await self.send_action(recipient, SLAP_TEMPLATE.format(slapee=slapee,
+                                                           fish=fish))
 
 
 @bot.on_privmsg
