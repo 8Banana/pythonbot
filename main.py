@@ -4,7 +4,7 @@ import urllib.parse
 
 import curio
 
-from ircbot import IrcBot
+from ircbot import IrcBot, NO_SPLITTING
 
 SLAP_TEMPLATE = "slaps {slappee} around a bit with {fish}"
 FISH = (
@@ -15,50 +15,55 @@ FISH = (
 bot = IrcBot()
 
 
-@bot.on_privmsg
+@bot.on_command(">>>", NO_SPLITTING)
 async def annoy_raylu(self, _, recipient, text):
     if recipient == self.nick:
         return
-    if text.startswith(">>> "):
-        text = text.replace(">>>", "!py3", 1)
-        await self.send_privmsg(recipient, text)
+    await self.send_privmsg(recipient, "!py3 " + text)
 
 
 @bot.on_command("!slap", 1)
-async def slap(self, sender, recipient, slappee):
+async def slap(self, _, recipient, slappee):
     fish = random.choice(FISH)
     await self.send_action(recipient, SLAP_TEMPLATE.format(slappee=slappee,
                                                            fish=fish))
 
 
-@bot.on_privmsg
-async def google(self, _, recipient, text):
+def _make_url(domain, what2google):
+    # example response: 'http://www.lmfgtfy.com/?q=wolo+wolo'
+    params = urllib.parse.urlencode({'q': what2google})
+    return "http://www.%s/?%s" % (domain, params)
+
+
+async def _respond(self, recipient, domain, text):
     if recipient == self.nick:
         return
 
-    if text.startswith(("!google ", "!fgoogle ")):
-        try:
-            command, target, what2google = text.split(maxsplit=2)
-        except ValueError:
-            command = text.split(maxsplit=1)[0]
-            await self.send_privmsg(
-                recipient, "Usage: %s nick what2google" % command)
-            return
+    try:
+        target, what2google = text.split(maxsplit=1)
+    except ValueError:
+        command = "fgoogle" if domain == "lmfgtfy.com" else "google"
+        await self.send_privmsg(recipient,
+                                "Usage: !%s nick what2google" % command)
+        return
 
-        if 'f' in command:
-            domain = 'lmfgtfy.com'
-        else:
-            domain = 'lmgtfy.com'
+    url = _make_url(domain, what2google)
 
-        # example response: 'http://www.lmfgtfy.com/?q=wolo+wolo'
-        params = urllib.parse.urlencode({'q': what2google})
-        response = 'http://www.%s/?%s' % (domain, params)
+    await self.send_privmsg(recipient, "%s: %s" % (target, url))
 
-        await self.send_privmsg(recipient, "%s: %s" % (target, response))
+
+@bot.on_command("!google", NO_SPLITTING)
+async def google(self, _, recipient, text):
+    await _respond(self, recipient, "lmgtfy.com", text)
+
+
+@bot.on_command("!fgoogle", NO_SPLITTING)
+async def fgoogle(self, _, recipient, text):
+    await _respond(self, recipient, "lmfgtfy.com", text)
 
 
 async def main():
-    await bot.connect("macigpythonbot", "chat.freenode.net")
+    await bot.connect("pyhtonbot", "chat.freenode.net")
     await bot.join_channel("#8banana")
     await bot.join_channel("##learnpython")
     await bot.mainloop()
