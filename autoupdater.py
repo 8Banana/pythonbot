@@ -6,7 +6,8 @@ import sys
 import threading
 import time
 
-interval = 5  # seconds
+# ~1-2h is good IMO. depends on how often you update.
+INTERVAL = int(1 * 60 * 60 * 1.5)  # seconds
 
 
 def _get_output(args):
@@ -31,19 +32,16 @@ def _worker(filepath):
             new_commit_hash = _get_output(["git", "rev-parse", "HEAD"])
             # print("Got commit", new_commit_hash)
 
-            if new_commit_hash != commit_hash or True:
+            if new_commit_hash != commit_hash:
                 # print("Restarting..")
                 os.execlp(sys.executable, sys.executable, filepath)
 
-        time.sleep(interval)
+        time.sleep(INTERVAL)
 
 
 def initialize():
     # Initialize the auto-updater. Must be called in the main script.
-
     parent_globals = inspect.currentframe().f_back.f_globals
     assert parent_globals["__name__"] == "__main__"
-
     filepath = parent_globals["__file__"]
-
     threading.Thread(target=_worker, args=(filepath,)).start()

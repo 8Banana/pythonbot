@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import collections
 import inspect
+import sys
 
 import curio
 from curio import socket
@@ -82,9 +83,16 @@ class IrcBot:
         self.nick = nick
         self._server = (host, port)
 
+        # TODO: Implement if things break.
+        #if "autoupdater" in sys.modules:
+        #    print("Sleeping briefly...")
+        #    await curio.sleep(10)
+        #    print("Done sleeping.")
+
         await self._sock.connect(self._server)
         await self._send("NICK", self.nick)
         await self._send("USER", self.nick, "0", "*", ":" + self.nick)
+
         while True:
             line = await self._recv_line()
             if line.startswith("PING"):
