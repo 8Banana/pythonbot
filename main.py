@@ -4,6 +4,7 @@ import urllib.parse
 
 import curio
 
+import autoupdater
 from ircbot import IrcBot, NO_SPLITTING
 
 SLAP_TEMPLATE = "slaps {slappee} around a bit with {fish}"
@@ -63,6 +64,8 @@ async def fgoogle(self, _, recipient, text):
 
 
 async def main():
+    autoupdater.initialize()
+
     await bot.connect("pyhtonbot", "chat.freenode.net")
     await bot.join_channel("#8banana")
     await bot.join_channel("##learnpython")
