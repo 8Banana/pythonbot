@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+import collections
 import random
 import urllib.parse
 
 import curio
+from curio import socket, subprocess
 
 import autoupdater
 from ircbot import IrcBot, NO_SPLITTING
@@ -28,6 +30,32 @@ async def slap(self, _, recipient, slappee):
     fish = random.choice(FISH)
     await self.send_action(recipient, SLAP_TEMPLATE.format(slappee=slappee,
                                                            fish=fish))
+
+
+async def termbin(lines):
+    async with socket.socket() as sock:
+        await sock.connect(('termbin.com', 9999))
+        for line in lines:
+            await sock.send(line.encode('utf-8'))
+
+        url = (await sock.recv(1024)).decode('ascii').strip()
+        if url == 'Use netcat.':
+            return "Sorry, termbin hates me today :("
+        return url
+
+
+logs = collections.defaultdict(lambda: collections.deque(maxlen=100))
+
+
+@bot.on_privmsg
+async def append_to_log(bot, sender, channel, message):
+    logs[channel].append(f'<{sender.nick}> {message}\n')
+
+
+@bot.on_command("!log", 0)
+async def send_log(self, sender, channel):
+    result = await termbin(logs[channel])
+    await self.send_privmsg(channel, f"{sender.nick}: {result}")
 
 
 def _make_url(domain, what2google):
@@ -69,6 +97,12 @@ async def main():
     await bot.connect("pyhtonbot", "chat.freenode.net")
     await bot.join_channel("#8banana")
     await bot.join_channel("##learnpython")
+
+    # this is not sent to ##learnpython
+    commit = (await subprocess.check_output(
+        ['git', 'log', '-1', '--pretty=%h %B'])).decode('utf-8')
+    await bot.send_privmsg("#8banana", "I was just updated. " + commit)
+
     await bot.mainloop()
 
 
