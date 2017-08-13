@@ -44,7 +44,7 @@ async def termbin(lines):
         return url
 
 
-logs = collections.defaultdict(lambda: collections.deque(maxlen=100))
+logs = collections.defaultdict(lambda: collections.deque(maxlen=500))
 
 
 @bot.on_privmsg
