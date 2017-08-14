@@ -38,7 +38,7 @@ async def termbin(lines):
         await sock.connect(('termbin.com', 9999))
         for line in lines:
             assert not line.endswith('\n')
-            await sock.send(line.encode('utf-8') + '\n')
+            await sock.send(line.encode('utf-8') + b'\n')
 
         url = (await sock.recv(1024)).decode('ascii').strip()
         if url == 'Use netcat.':
@@ -72,6 +72,8 @@ async def append_privmsg_to_log(_, sender, channel, message):
 
 @bot.on_command("!log", 0)
 async def send_log(self, sender, channel):
+    msg = f"{sender.nick}: Uploading logs, this might take a second..."
+    await self.send_privmsg(channel, msg)
     result = await termbin(logs[channel])
     await self.send_privmsg(channel, f"{sender.nick}: {result}")
 
