@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import collections
+import datetime
 import random
 import urllib.parse
 
@@ -36,7 +37,8 @@ async def termbin(lines):
     async with socket.socket() as sock:
         await sock.connect(('termbin.com', 9999))
         for line in lines:
-            await sock.send(line.encode('utf-8'))
+            assert not line.endswith('\n')
+            await sock.send(line.encode('utf-8') + '\n')
 
         url = (await sock.recv(1024)).decode('ascii').strip()
         if url == 'Use netcat.':
@@ -47,9 +49,25 @@ async def termbin(lines):
 logs = collections.defaultdict(lambda: collections.deque(maxlen=500))
 
 
+@bot.on_join
+async def append_join_to_log(_, sender, channel):
+    now = datetime.datetime.now().strftime("%X")
+    logs[channel].append(f'[{now}] {sender.nick} joined {channel}')
+
+
+@bot.on_part
+async def append_part_to_log(_, sender, channel, reason=None):
+    if reason is None:
+        reason = "No reason."
+
+    now = datetime.datetime.now().strftime("%X")
+    logs[channel].append(f'[{now}] {sender.nick} parted {channel} ({reason})')
+
+
 @bot.on_privmsg
-async def append_to_log(bot, sender, channel, message):
-    logs[channel].append(f'<{sender.nick}> {message}\n')
+async def append_privmsg_to_log(_, sender, channel, message):
+    now = datetime.datetime.now().strftime("%X")
+    logs[channel].append(f'[{now}] <{sender.nick}> {message}')
 
 
 @bot.on_command("!log", 0)
@@ -99,9 +117,12 @@ async def main():
     await bot.join_channel("##learnpython")
 
     # this is not sent to ##learnpython
-    commit = (await subprocess.check_output(
-        ['git', 'log', '-1', '--pretty=%h %B'])).decode('utf-8')
-    await bot.send_privmsg("#8banana", "I was just updated. " + commit)
+    info = (await subprocess.check_output(
+        ['git', 'log', '-1', '--pretty=%ai\t%B'])).decode('utf-8')
+    update_time, commit_message = info.split("\t", 1)
+    commit_summary = commit_message.splitlines()[0]
+    await bot.send_privmsg("#8banana",
+                           f"Updated at {update_time}: {commit_summary!r}")
 
     await bot.mainloop()
 
