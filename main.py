@@ -117,6 +117,8 @@ async def main():
     await bot.connect("pyhtonbot", "chat.freenode.net")
     await bot.join_channel("#8banana")
     await bot.join_channel("##learnpython")
+    await bot.join_channel("#lpmc")
+    await bot.join_channel("#learnprogramming")
 
     # this is not sent to ##learnpython
     info = (await subprocess.check_output(
