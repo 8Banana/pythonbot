@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import sys
+import os
+
 import collections
 import datetime
 import random
@@ -120,7 +123,7 @@ async def main():
     await bot.join_channel("#lpmc")
     await bot.join_channel("#learnprogramming")
 
-    # this is not sent to ##learnpython
+    # this only sent to #8banana
     info = (await subprocess.check_output(
         ['git', 'log', '-1', '--pretty=%ai\t%B'])).decode('utf-8')
     update_time, commit_message = info.split("\t", 1)
@@ -132,4 +135,9 @@ async def main():
 
 
 if __name__ == "__main__":
-    curio.run(main)
+    while True:
+        try:
+            curio.run(main)
+        except IOError:
+            os.execv(__file__, sys.argv)
+
