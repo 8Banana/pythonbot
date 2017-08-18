@@ -131,13 +131,11 @@ async def main():
     await bot.send_privmsg("#8banana",
                            f"Updated at {update_time}: {commit_summary!r}")
 
-    await bot.mainloop()
-
-
-if __name__ == "__main__":
     while True:
         try:
-            curio.run(main)
+            await bot.mainloop()
         except IOError:
             os.execv(__file__, sys.argv)
 
+if __name__ == "__main__":
+        curio.run(main)
