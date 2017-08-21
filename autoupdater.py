@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import atexit
 import inspect
 import os
 import subprocess
@@ -32,6 +33,15 @@ def _worker(filepath):
             new_commit_hash = _get_output(["git", "rev-parse", "HEAD"])
 
             if new_commit_hash != commit_hash:
+                if hasattr(atexit, "_run_exitfuncs"):
+                    # We're about to leave in a way that's not expected by
+                    # Python.
+                    # This means that some things, including atexit callbacks,
+                    # won't be run.
+                    # We want them to run because ircbot.py relies on them, so
+                    # this is our kind-of CPython hack.
+                    atexit._run_exitfuncs()
+
                 os.execlp(sys.executable, sys.executable, filepath)
 
         with update_condition:
