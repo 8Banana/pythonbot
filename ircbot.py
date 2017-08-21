@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import atexit
 import collections
 import inspect
-import sys
+import json
+import os
 
 import curio
 from curio import socket
@@ -27,6 +29,8 @@ def _create_callback_registration(key):
 
 
 class IrcBot:
+    STATE_PATH = os.path.join(os.path.dirname(__file__), "state.json")
+
     def __init__(self, encoding="utf-8"):
         self.nick = None
         self._server = None
@@ -35,9 +39,21 @@ class IrcBot:
         self._linebuffer = collections.deque()
         self._sock = socket.socket()
 
+        if os.path.isfile(self.STATE_PATH):
+            with open(self.STATE_PATH) as f:
+                self.state = json.load(f)
+        else:
+            self.state = {}
+
+        atexit.register(self._save_state)
+
         self._connection_callbacks = []
         self._message_callbacks = {}
         self._command_callbacks = {}
+
+    def _save_state(self):
+        with open(self.STATE_PATH, "w") as f:
+            json.dump(self.state, f)
 
     async def _send(self, *parts):
         data = " ".join(parts).encode(self.encoding) + b"\r\n"

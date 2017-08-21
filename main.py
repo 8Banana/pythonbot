@@ -128,11 +128,15 @@ async def fgoogle(self, _, recipient, text):
 async def main():
     autoupdater.initialize()
 
-    await bot.connect("pyhtonbot", "chat.freenode.net")
-    await bot.join_channel("#8banana")
-    await bot.join_channel("##learnpython")
-    await bot.join_channel("#lpmc")
-    await bot.join_channel("#learnprogramming")
+    if len(sys.argv) > 1 and sys.argv[1] == "debug":
+        await bot.connect("pyhtonbot2", "chat.freenode.net")
+        await bot.join_channel("#8banana")
+    else:
+        await bot.connect("pyhtonbot", "chat.freenode.net")
+        await bot.join_channel("#8banana")
+        await bot.join_channel("##learnpython")
+        await bot.join_channel("#lpmc")
+        await bot.join_channel("#learnprogramming")
 
     # this only sent to #8banana
     info = (await subprocess.check_output(
