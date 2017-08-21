@@ -36,6 +36,23 @@ async def slap(self, _, recipient, slappee):
                                                            fish=fish))
 
 
+@bot.on_connect
+async def initialize_logs(self):
+    logs = collections.defaultdict(lambda: collections.deque(maxlen=500))
+
+    if "logs" in self.state:
+        logs.update({k: collections.deque(v, maxlen=500)
+                     for k, v in self.state["logs"].items()})
+
+    self.state["logs"] = logs
+
+
+@bot.on_disconnect
+def save_logs(self):
+    self.state["logs"] = \
+        {k: list(v) for k, v in self.state.get("logs", {}).items()}
+
+
 async def termbin(lines):
     async with socket.socket() as sock:
         await sock.connect(('termbin.com', 9999))
@@ -49,40 +66,42 @@ async def termbin(lines):
         return url
 
 
-# TODO: Move this to the bot's state.
-logs = collections.defaultdict(lambda: collections.deque(maxlen=500))
-
-
 @bot.on_join
-async def append_join_to_log(_, sender, channel):
+async def append_join_to_log(self, sender, channel):
+    logs = self.state["logs"]
     now = datetime.datetime.now().strftime("%X")
     logs[channel].append(f'[{now}] {sender.nick} joined {channel}')
 
 
 @bot.on_part
-async def append_part_to_log(_, sender, channel, reason=None):
+async def append_part_to_log(self, sender, channel, reason=None):
     if reason is None:
         reason = "No reason."
 
+    logs = self.state["logs"]
     now = datetime.datetime.now().strftime("%X")
     logs[channel].append(f'[{now}] {sender.nick} parted {channel} ({reason})')
 
+
 @bot.on_quit
-async def append_quit_to_log(_, sender, reason=None):
+async def append_quit_to_log(self, sender, reason=None):
     if reason is None:
         reason = "No reason."
 
     now = datetime.datetime.now().strftime("%X")
 
-    # TODO: Only show this in channels where the user was present.
+    # Can we know what channels to show this in?
     msg = f'[{now}] {sender.nick} quit ({reason})'
 
+    logs = self.state["logs"]
     for log in logs.values():
         log.append(msg)
 
+
 @bot.on_privmsg
-async def append_privmsg_to_log(_, sender, channel, message):
+async def append_privmsg_to_log(self, sender, channel, message):
     now = datetime.datetime.now().strftime("%X")
+    logs = self.state["logs"]
     logs[channel].append(f'[{now}] <{sender.nick}> {message}')
 
 
@@ -90,6 +109,7 @@ async def append_privmsg_to_log(_, sender, channel, message):
 async def send_log(self, sender, channel):
     msg = f"{sender.nick}: Uploading logs, this might take a second..."
     await self.send_privmsg(channel, msg)
+    logs = self.state["logs"]
     result = await termbin(logs[channel])
     await self.send_privmsg(channel, f"{sender.nick}: {result}")
 
@@ -148,11 +168,12 @@ async def autolog(self, sender, recipient, argument):
 @bot.on_join
 async def autolog_send(self, sender, channel):
     if sender.nick in self.state.get("autologgers", ()):
+        logs = self.state["logs"]
         result = await termbin(logs[channel])
 
         # We do a weird trick here.
         # Some clients show NOTICEs of the form "[CHANNELNAME] NOTICE" in the
-        # channel buffer named by CHANNELNAME. 
+        # channel buffer named by CHANNELNAME.
         # We abuse this here to make the logs show up in the channel itself.
         await self.send_notice(sender.nick, f"[{channel}] Logs: {result}")
 
@@ -162,7 +183,7 @@ async def main():
 
     if len(sys.argv) > 1 and sys.argv[1] == "debug":
         await bot.connect("pyhtonbot2", "chat.freenode.net")
-        await bot.join_channel("#8banana")
+        await bot.join_channel("#8banana-bottest")
     else:
         await bot.connect("pyhtonbot", "chat.freenode.net")
         await bot.join_channel("#8banana")
@@ -185,4 +206,4 @@ async def main():
             os.execv(__file__, sys.argv)
 
 if __name__ == "__main__":
-        curio.run(main)
+    curio.run(main)

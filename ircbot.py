@@ -35,6 +35,7 @@ class IrcBot:
         self.nick = None
         self._server = None
         self.encoding = encoding
+        self.running = True
 
         self._linebuffer = collections.deque()
         self._sock = socket.socket()
@@ -48,10 +49,20 @@ class IrcBot:
         atexit.register(self._save_state)
 
         self._connection_callbacks = []
+        self._disconnection_callbacks = []
+
         self._message_callbacks = {}
         self._command_callbacks = {}
 
     def _save_state(self):
+        # We're in a weird place here, so I made the design decision to only
+        # allow non-coroutines.
+        # It would've been possible to also allow coroutines, however that
+        # would involve creating a new curio Kernel.
+
+        for callback in self._disconnection_callbacks:
+            callback(self)
+
         with open(self.STATE_PATH, "w") as f:
             json.dump(self.state, f)
 
@@ -131,7 +142,7 @@ class IrcBot:
                          ":\x01ACTION {}\x01".format(action))
 
     async def mainloop(self):
-        while True:
+        while self.running:
             line = await self._recv_line()
             if not line:
                 continue
@@ -168,6 +179,13 @@ class IrcBot:
         if not inspect.iscoroutinefunction(func):
             raise ValueError("You can only register coroutines!")
         self._connection_callbacks.append(func)
+
+    def on_disconnect(self, func):
+        # Registers a coroutine to be ran right before exit.
+        # This is so you can modify your state to be JSON-compliant.
+        if inspect.iscoroutinefunction(func):
+            raise ValueError("You can only register non-coroutines!")
+        self._disconnection_callbacks.append(func)
 
     on_privmsg = _create_callback_registration("PRIVMSG")
     on_join = _create_callback_registration("JOIN")
