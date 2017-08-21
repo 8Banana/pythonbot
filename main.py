@@ -18,6 +18,7 @@ FISH = (
     "asyncio", "multiprocessing", "twisted", "django", "pathlib",
     "python 2.7", "a daemon thread",
 )
+ADMINS = {"__Myst__", "theelous3", "Akuli", "Zaab1t"}
 
 bot = IrcBot()
 
@@ -176,6 +177,16 @@ async def autolog_send(self, sender, channel):
         # channel buffer named by CHANNELNAME.
         # We abuse this here to make the logs show up in the channel itself.
         await self.send_notice(sender.nick, f"[{channel}] Logs: {result}")
+
+
+@bot.on_command("!update", NO_SPLITTING)
+async def update(_self, sender, recipient, _):
+    def worker():
+        with autoupdater.update_condition:
+            autoupdater.update_condition.notify_all()
+
+    if sender.nick in ADMINS:
+        await curio.run_in_thread(worker)
 
 
 async def main():

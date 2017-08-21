@@ -4,10 +4,11 @@ import os
 import subprocess
 import sys
 import threading
-import time
 
-# ~1-2h is good IMO. depends on how often you update.
-INTERVAL = int(1 * 60 * 60 * 1.5)  # seconds
+# This interval is 10 minutes because it's fun to see your updates come out
+# when you want them to.
+INTERVAL = int(1 * 60 * 10)  # seconds
+update_condition = threading.Condition()
 
 
 def _get_output(args):
@@ -21,7 +22,6 @@ def _worker(filepath):
     remote = "origin"
     branch = _get_output(["git", "symbolic-ref", "--short", "HEAD"])
     commit_hash = _get_output(["git", "rev-parse", "HEAD"])
-    # print(f"Working on {remote}/{branch}@{commit_hash}")
 
     while True:
         command = subprocess.run(["git", "pull", remote, branch],
@@ -30,13 +30,12 @@ def _worker(filepath):
 
         if command.returncode == 0:
             new_commit_hash = _get_output(["git", "rev-parse", "HEAD"])
-            # print("Got commit", new_commit_hash)
 
             if new_commit_hash != commit_hash:
-                # print("Restarting..")
                 os.execlp(sys.executable, sys.executable, filepath)
 
-        time.sleep(INTERVAL)
+        with update_condition:
+            update_condition.wait(INTERVAL)
 
 
 def initialize():
