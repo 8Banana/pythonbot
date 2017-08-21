@@ -213,8 +213,8 @@ async def main():
     while True:
         try:
             await bot.mainloop()
-        except IOError:
-            os.execv(__file__, sys.argv)
+        except OSError:
+            autoupdater.restart()
 
 if __name__ == "__main__":
     curio.run(main)
