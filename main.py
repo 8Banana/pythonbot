@@ -66,6 +66,17 @@ async def append_part_to_log(_, sender, channel, reason=None):
     now = datetime.datetime.now().strftime("%X")
     logs[channel].append(f'[{now}] {sender.nick} parted {channel} ({reason})')
 
+@bot.on_quit
+async def append_quit_to_log(_, sender, reason=None):
+    if reason is None:
+        reason = "No reason."
+
+    now = datetime.datetime.now().strftime("%X")
+
+    # TODO: Only show this in channels where the user was present.
+    msg = f'[{now}] {sender.nick} quit ({reason})'
+    for log in logs:
+        log.append(msg)
 
 @bot.on_privmsg
 async def append_privmsg_to_log(_, sender, channel, message):

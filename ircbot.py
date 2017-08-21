@@ -21,7 +21,7 @@ def _create_callback_registration(key):
     def _inner(self, func):
         if not inspect.iscoroutinefunction(func):
             raise ValueError("You can only register coroutines!")
-        self._message_callbacks[key].append(func)
+        self._message_callbacks.setdefault(key, []).append(func)
         return func
     return _inner
 
@@ -36,7 +36,7 @@ class IrcBot:
         self._sock = socket.socket()
 
         self._connection_callbacks = []
-        self._message_callbacks = {"PRIVMSG": [], "JOIN": [], "PART": []}
+        self._message_callbacks = {}
         self._command_callbacks = {}
 
     async def _send(self, *parts):
@@ -82,12 +82,6 @@ class IrcBot:
     async def connect(self, nick, host, port=6667):
         self.nick = nick
         self._server = (host, port)
-
-        # TODO: Implement if things break.
-        #if "autoupdater" in sys.modules:
-        #    print("Sleeping briefly...")
-        #    await curio.sleep(10)
-        #    print("Done sleeping.")
 
         await self._sock.connect(self._server)
         await self._send("NICK", self.nick)
@@ -159,6 +153,7 @@ class IrcBot:
     on_privmsg = _create_callback_registration("PRIVMSG")
     on_join = _create_callback_registration("JOIN")
     on_part = _create_callback_registration("PART")
+    on_quit = _create_callback_registration("QUIT")
 
     def on_command(self, command, arg_amount=ANY_ARGUMENTS):
         def _inner(func):
