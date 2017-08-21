@@ -49,6 +49,7 @@ async def termbin(lines):
         return url
 
 
+# TODO: Move this to the bot's state.
 logs = collections.defaultdict(lambda: collections.deque(maxlen=500))
 
 
@@ -75,7 +76,8 @@ async def append_quit_to_log(_, sender, reason=None):
 
     # TODO: Only show this in channels where the user was present.
     msg = f'[{now}] {sender.nick} quit ({reason})'
-    for log in logs:
+
+    for log in logs.values():
         log.append(msg)
 
 @bot.on_privmsg
@@ -123,6 +125,36 @@ async def google(self, _, recipient, text):
 @bot.on_command("!fgoogle", NO_SPLITTING)
 async def fgoogle(self, _, recipient, text):
     await _respond(self, recipient, "lmfgtfy.com", text)
+
+
+@bot.on_command("!autolog", 1)
+async def autolog(self, sender, recipient, argument):
+    argument = argument.lower()
+
+    self.state.setdefault("autologgers", [])
+    if argument == "on":
+        self.state["autologgers"].append(sender.nick)
+        await self.send_privmsg(recipient,
+                                f"{sender.nick}: You will recieve logs automatically.")
+    elif argument == "off":
+        if sender.nick in self.state["autologgers"]:
+            self.state["autologgers"].remove(sender.nick)
+        await self.send_privmsg(recipient,
+                                f"{sender.nick}: You will not recieve logs automatically anymore.")
+    else:
+        await self.send_privmsg(recipient, f"{sender.nick}: USAGE: !autolog on/off")
+
+
+@bot.on_join
+async def autolog_send(self, sender, channel):
+    if sender.nick in self.state.get("autologgers", ()):
+        result = await termbin(logs[channel])
+
+        # We do a weird trick here.
+        # Some clients show NOTICEs of the form "[CHANNELNAME] NOTICE" in the
+        # channel buffer named by CHANNELNAME. 
+        # We abuse this here to make the logs show up in the channel itself.
+        await self.send_notice(sender.nick, f"[{channel}] Logs: {result}")
 
 
 async def main():

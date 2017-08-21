@@ -120,6 +120,9 @@ class IrcBot:
     async def join_channel(self, channel):
         await self._send("JOIN", channel)
 
+    async def send_notice(self, recipient, text):
+        await self._send("NOTICE", recipient, ":" + text)
+
     async def send_privmsg(self, recipient, text):
         await self._send("PRIVMSG", recipient, ":" + text)
 
