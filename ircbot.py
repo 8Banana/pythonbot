@@ -152,6 +152,28 @@ class IrcBot:
                 await self._send(line.replace("PING", "PONG", 1))
                 continue
             msg = self._split_line(line)
+
+            # The following block handles self.channel_users
+            if msg.command == "353":  # RPL_NAMREPLY
+                # The RFC is kind of strange on this.
+                # The number of parameters varies between theory and
+                # practice.
+                channel = msg.args[2]
+                nicks = [nick.lstrip("@+")
+                         for nick in msg.args[3].split()]
+                self.channel_users.setdefault(channel, set()).update(nicks)
+            elif msg.command == "JOIN":
+                # The RFC is kind of strange on this.
+                # The number of parameters varies between theory and
+                # practice.
+                channel = msg.args[0]
+                nick = msg.sender.nick
+                self.channel_users.setdefault(channel, set()).add(nick)
+            elif msg.command == "PART":
+                channel = msg.args[0]
+                nick = msg.sender.nick
+                self.channel_users.setdefault(channel, set()).discard(nick)
+
             callbacks = self._message_callbacks.get(msg.command, ())
             async with curio.TaskGroup() as g:
                 spawn_callbacks = True
@@ -170,29 +192,6 @@ class IrcBot:
                             coro = callback(self, msg.sender, msg.args[0],
                                             *args)
                             await g.spawn(coro)
-
-                # The following block handles self.channel_users
-                if msg.command == "353":  # RPL_NAMREPLY
-                    # The RFC is kind of strange on this.
-                    # The number of parameters varies between theory and
-                    # practice.
-                    channel = msg.args[2]
-                    nicks = [nick.lstrip("@+")
-                             for nick in msg.args[3].split()]
-
-                    self.channel_users.setdefault(channel, set()).update(nicks)
-                elif msg.command == "JOIN":
-                    # The RFC is kind of strange on this.
-                    # The number of parameters varies between theory and
-                    # practice.
-                    channel = msg.args[0]
-                    nick = msg.sender.nick
-
-                    self.channel_users.setdefault(channel, set()).add(nick)
-                elif msg.command == "PART":
-                    channel = msg.args[0]
-                    nick = msg.sender.nick
-                    self.channel_users.setdefault(channel, set()).discard(nick)
 
                 if ALWAYS_CALLBACK_PRIVMSG or spawn_callbacks:
                     # Sometimes we don't want to spawn the PRIVMSG callbacks if
