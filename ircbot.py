@@ -197,17 +197,11 @@ class IrcBot:
 
             # The following block handles self.channel_users
             if msg.command == "353":  # RPL_NAMREPLY
-                # The RFC is kind of strange on this.
-                # The number of parameters varies between theory and
-                # practice.
                 channel = msg.args[2]
                 nicks = [nick.lstrip("@+")
                          for nick in msg.args[3].split()]
                 self.channel_users.setdefault(channel, set()).update(nicks)
             elif msg.command == "JOIN":
-                # The RFC is kind of strange on this.
-                # The number of parameters varies between theory and
-                # practice.
                 channel = msg.args[0]
                 nick = msg.sender.nick
                 self.channel_users.setdefault(channel, set()).add(nick)
