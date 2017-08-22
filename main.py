@@ -95,8 +95,10 @@ async def append_quit_to_log(self, sender, reason=None):
     msg = f'[{now}] {sender.nick} quit ({reason})'
 
     logs = self.state["logs"]
-    for log in logs.values():
-        log.append(msg)
+
+    for channel, users in self.channel_users.items():
+        if sender.nick in users:
+            logs[channel].append(msg)
 
 
 @bot.on_privmsg
@@ -207,6 +209,7 @@ async def main():
         ['git', 'log', '-1', '--pretty=%ai\t%B'])).decode('utf-8')
     update_time, commit_message = info.split("\t", 1)
     commit_summary = commit_message.splitlines()[0]
+
     await bot.send_privmsg("#8banana",
                            f"Updated at {update_time}: {commit_summary!r}")
 

@@ -40,6 +40,8 @@ class IrcBot:
         self._linebuffer = collections.deque()
         self._sock = socket.socket()
 
+        self.channel_users = {}
+
         if os.path.isfile(self.STATE_PATH):
             with open(self.STATE_PATH) as f:
                 self.state = json.load(f)
@@ -168,6 +170,30 @@ class IrcBot:
                             coro = callback(self, msg.sender, msg.args[0],
                                             *args)
                             await g.spawn(coro)
+
+                # The following block handles self.channel_users
+                if msg.command == "353":  # RPL_NAMREPLY
+                    # The RFC is kind of strange on this.
+                    # The number of parameters varies between theory and
+                    # practice.
+                    channel = msg.args[2]
+                    nicks = [nick.lstrip("@+")
+                             for nick in msg.args[3].split()]
+
+                    self.channel_users.setdefault(channel, set()).update(nicks)
+                elif msg.command == "JOIN":
+                    # The RFC is kind of strange on this.
+                    # The number of parameters varies between theory and
+                    # practice.
+                    channel = msg.args[0]
+                    nick = msg.sender.nick
+
+                    self.channel_users.setdefault(channel, set()).add(nick)
+                elif msg.command == "PART":
+                    channel = msg.args[0]
+                    nick = msg.sender.nick
+                    self.channel_users.setdefault(channel, set()).discard(nick)
+
                 if ALWAYS_CALLBACK_PRIVMSG or spawn_callbacks:
                     # Sometimes we don't want to spawn the PRIVMSG callbacks if
                     # this is a command.
