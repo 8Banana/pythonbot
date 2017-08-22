@@ -29,9 +29,37 @@ def _create_callback_registration(key):
 
 
 class IrcBot:
-    STATE_PATH = os.path.join(os.path.dirname(__file__), "state.json")
+    """
+    The main IrcBot class.
+
+    You should instantiate this at the top of your bot,
+    and use its decorators to register event handlers.
+
+    Public instance attributes:
+        nick: The nickname of the bot as a str.
+        encoding: The encoding used to communicate with the server as a str.
+        running: A boolean representing if the bot's mainloop is running.
+
+        channel_users: A dict mapping each channel name to the users in it.
+
+        state: A dictionary that is saved and loaded to a json file.
+               Useful for keeping variables between runs of the bot.
+
+        state_path: The path of the file to save the state to.
+                    Defaults to the directory of the script + state.json
+                    You can change this either on the class or on an instance.
+    """
+
+    state_path = os.path.join(os.path.dirname(__file__), "state.json")
 
     def __init__(self, encoding="utf-8"):
+        """
+        Initializes an IrcBot instance.
+
+        The only parameter for the initializer is encoding.
+        The other parameters you would expect are taken in other methods.
+        """
+
         self.nick = None
         self._server = None
         self.encoding = encoding
@@ -42,8 +70,8 @@ class IrcBot:
 
         self.channel_users = {}
 
-        if os.path.isfile(self.STATE_PATH):
-            with open(self.STATE_PATH) as f:
+        if os.path.isfile(self.state_path):
+            with open(self.state_path) as f:
                 self.state = json.load(f)
         else:
             self.state = {}
@@ -65,7 +93,7 @@ class IrcBot:
         for callback in self._disconnection_callbacks:
             callback(self)
 
-        with open(self.STATE_PATH, "w") as f:
+        with open(self.state_path, "w") as f:
             json.dump(self.state, f)
 
     async def _send(self, *parts):
@@ -109,6 +137,10 @@ class IrcBot:
         return Message(sender, command, args)
 
     async def connect(self, nick, host, port=6667):
+        """
+        Connects to an IRC server specified by host and port with a given nick.
+        """
+
         self.nick = nick
         self._server = (host, port)
 
@@ -140,10 +172,20 @@ class IrcBot:
         await self._send("PRIVMSG", recipient, ":" + text)
 
     async def send_action(self, recipient, action):
+        """
+        Sends an action to a recipient.
+
+        This is akin to doing "/me some action" on a regular IRC client.
+        """
+
         await self._send("PRIVMSG", recipient,
                          ":\x01ACTION {}\x01".format(action))
 
     async def mainloop(self):
+        """
+        Handles keeping the connection alive and event handlers.
+        """
+
         while self.running:
             line = await self._recv_line()
             if not line:
@@ -218,6 +260,27 @@ class IrcBot:
     on_quit = _create_callback_registration("QUIT")
 
     def on_command(self, command, arg_amount=ANY_ARGUMENTS):
+        """
+        Creates a decorator that registers a command handler.
+
+        The argument command must include the prefix.
+
+        The command handler takes as arguments:
+            1. The bot instance
+            2. The command sender.
+            3. The command recipient, usually a channel.
+            4. Any arguments that came with the command,
+               split depending on the arg_amount argument.
+
+        As an example, to register a command that looks like this:
+            !slap nickname
+
+        You'd write something like this:
+            @bot.on_command("!slap", arg_amount=1)
+            def slap(self, sender, recipient, slappee):
+                ...
+        """
+
         def _inner(func):
             if not inspect.iscoroutinefunction(func):
                 raise ValueError("You can only register coroutines!")
